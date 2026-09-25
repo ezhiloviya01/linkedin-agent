@@ -1,5 +1,22 @@
 # LinkedIn Marketing Agent
 
+import json
+from dotenv import load_dotenv
+load_dotenv()
+import os
+
+linkedin_client_id = os.getenv("LINKEDIN_CLIENT_ID")
+linkedin_client_secret = os.getenv("LINKEDIN_CLIENT_SECRET")
+linkedin_redirect_uri = os.getenv("LINKEDIN_REDIRECT_URI")
+print("LinkedIn Client ID loaded:", bool(linkedin_client_id))
+print("LinkedIn Client Secret loaded:", bool(linkedin_client_secret))
+print("LinkedIn Redirect URI:", linkedin_redirect_uri)
+
+with open("client_config.json", "r", encoding="utf-8") as file:
+    client_config = json.load(file)
+
+print("Client loaded:", client_config["client_name"])
+
 def load_research():
     with open("linkedin_api_research.md", "r", encoding="utf-8") as file:
         return file.read()
