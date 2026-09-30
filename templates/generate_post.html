@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate LinkedIn Post</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f7fb;
+        }
+
+        .form-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            color: #1f2937;
+        }
+
+        p {
+            color: #6b7280;
+        }
+
+        label {
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="form-box">
+
+        <h1>Generate LinkedIn Post</h1>
+
+        <p>
+            Enter a topic and the agent will create a LinkedIn post
+            using the client's configuration.
+        </p>
+
+        <form method="POST">
+
+            <label>Post Topic</label>
+
+            <textarea
+                name="topic"
+                placeholder="Example: Why businesses should invest in SEO"
+                required
+            ></textarea>
+
+            <button type="submit">Generate Post</button>
+
+        </form>
+        {% if post %}
+    <div class="result">
+        <h2>Generated LinkedIn Post</h2>
+        <p>{{ post }}</p>
+    </div>
+{% endif %}
+
+    </div>
+
+</body>
+</html>

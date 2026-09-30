@@ -1,50 +1,10 @@
 {
-  "client_name": "BridgeE",
-  "business_description": "BridgeE is a marketing company that helps businesses with SEO, branding, videos, websites, and social media.",
-  "products_services": [
-    "SEO",
-    "SEM",
-    "Branding",
-    "Video Production",
-    "Web Development",
-    "Social Media Marketing"
-],
-  "target_audience": [
-    "Businesses",
-    "Startups",
-    "Founders",
-    "Companies looking for marketing support"
-],
-  "brand_voice": {
-    "tone": [
-        "Professional",
-        "Simple",
-        "Helpful",
-        "Friendly"
-    ],
-    "writing_samples": []
-},
-  "topics_to_post": [
-    "Industry insights",
-    "Company updates",
-    "Educational content",
-    "Business tips",
-    "Events",
-    "Founder-related content"
-],
-  "topics_to_avoid": [
-    "False information",
-    "Unverified claims",
-    "Confidential information",
-    "Private information",
-    "Offensive content",
-    "Unrelated topics",
-    "Attacking competitors"
-],
-  "content_rules": [
-    "Do not make unsupported claims",
-    "Do not share confidential or private information",
-    "Keep content professional and helpful",
-    "Never publish without human approval"
-]
+    "client_name": "ovi",
+    "business_description": "i",
+    "products_services": "i",
+    "target_audience": "i",
+    "brand_voice": "i",
+    "topics_to_post": "i",
+    "topics_to_avoid": "i",
+    "content_rules": "i"
 }

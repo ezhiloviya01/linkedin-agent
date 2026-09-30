@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check LinkedIn Post</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f7fb;
+        }
+
+        .form-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            color: #1f2937;
+        }
+
+        p {
+            color: #6b7280;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 220px;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="form-box">
+
+    <h1>Check LinkedIn Post</h1>
+
+    <p>Check the post against the client's content rules and guardrails.</p>
+
+    <form method="POST">
+
+        <textarea
+            name="post"
+            placeholder="Paste the generated LinkedIn post here..."
+            required
+        >{{ post or "" }}</textarea>
+
+        <button type="submit">Check Post</button>
+
+    </form>
+
+    {% if result %}
+        <div class="result">
+            <strong>Guardrail Check Result</strong>
+
+            <p>{{ result }}</p>
+        </div>
+    {% endif %}
+
+</div>
+
+</body>
+</html>

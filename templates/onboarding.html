@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LinkedIn Agent - Client Setup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f7fb;
+        }
+
+        h1 {
+            color: #1f2937;
+        }
+
+        p {
+            color: #6b7280;
+        }
+
+        .form-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 25px;
+            padding: 12px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="form-box">
+
+        <h1>LinkedIn Marketing Agent</h1>
+        <p>Let's set up your client before creating LinkedIn content.</p>
+
+        <form method="POST">
+
+            <label>Company Name</label>
+            <input type="text" name="client_name"
+                   placeholder="Enter company name">
+
+            <label>Business Description</label>
+            <textarea name="business_description"
+                      placeholder="Describe the business"></textarea>
+
+            <label>Products / Services</label>
+            <textarea name="products_services"
+                      placeholder="Enter products or services"></textarea>
+
+            <label>Target Audience</label>
+            <textarea name="target_audience"
+                      placeholder="Who is the target audience?"></textarea>
+
+            <label>Brand Voice / Writing Style</label>
+            <textarea name="brand_voice"
+                      placeholder="Example: Professional, simple, friendly, informative"></textarea>
+
+            <label>Topics to Post</label>
+            <textarea name="topics_to_post"
+                      placeholder="Enter topics the agent should post about"></textarea>
+
+            <label>Topics to Avoid</label>
+            <textarea name="topics_to_avoid"
+                      placeholder="Enter topics the agent should avoid"></textarea>
+
+            <label>Content Rules / Guardrails</label>
+            <textarea name="content_rules"
+                      placeholder="Enter rules the content must follow"></textarea>
+
+            <button type="submit">Continue</button>
+
+        </form>
+
+    </div>
+
+</body>
+</html>

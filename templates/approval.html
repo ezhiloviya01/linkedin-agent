@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Post Approval</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f7fb;
+        }
+
+        .form-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            color: #1f2937;
+        }
+
+        .post {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .approve {
+            background: #16a34a;
+        }
+
+        .reject {
+            background: #dc2626;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="form-box">
+
+    <h1>Post Approval</h1>
+
+    {% if post %}
+
+        <h3>Post for Review</h3>
+
+        <div class="post">
+            {{ post }}
+        </div>
+
+        {% if result %}
+            <div class="result">
+                <strong>Guardrail Result</strong>
+                <br><br>
+                {{ result }}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="/approve">
+            <button class="approve" type="submit">
+                Approve
+            </button>
+        </form>
+
+        <form method="POST" action="/reject">
+            <button class="reject" type="submit">
+                Reject
+            </button>
+        </form>
+
+    {% else %}
+
+        <p>No post is currently waiting for approval.</p>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>
