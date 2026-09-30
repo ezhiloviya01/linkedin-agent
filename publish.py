@@ -1,12 +1,8 @@
 import os
 import requests
-
 from dotenv import load_dotenv
 from activity_log import log_activity
-
 load_dotenv()
-
-
 def publish_post(post):
     access_token = os.getenv("LINKEDIN_ACCESS_TOKEN")
     member_id = os.getenv("LINKEDIN_MEMBER_ID")

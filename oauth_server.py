@@ -1,16 +1,22 @@
 import os
 import json
 import requests
+import secrets
 from flask import Flask, redirect, request, render_template
 from generate_post import generate_post
 from check_post import check_post
 from approval import set_pending_post, get_pending_post, approve_post, reject_post
 from publish import publish_post
 from dotenv import load_dotenv, set_key
+from urllib.parse import urlencode
 load_dotenv()
+oauth_states = set()
 
 app = Flask(__name__)
-
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "local-dev-secret-key")
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 CLIENT_ID = os.getenv("LINKEDIN_CLIENT_ID")
 CLIENT_SECRET = os.getenv("LINKEDIN_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("LINKEDIN_REDIRECT_URI")
@@ -45,19 +51,31 @@ def home():
 
 @app.route("/login")
 def login():
-    authorization_url = (
-        f"{AUTH_URL}"
-        f"?response_type=code"
-        f"&client_id={CLIENT_ID}"
-        f"&redirect_uri={REDIRECT_URI}"
-        f"&scope={SCOPE}"
-    )
+    state = secrets.token_urlsafe(16)
+    oauth_states.add(state)
+    print("SAVED STATE:", state)
+    authorization_url = AUTH_URL + "?" + urlencode({
+    "response_type": "code",
+    "client_id": CLIENT_ID,
+    "redirect_uri": REDIRECT_URI,
+    "scope": SCOPE,
+    "state": state
+})
 
     return redirect(authorization_url)
 
 
 @app.route("/callback")
 def callback():
+    returned_state = request.args.get("state")
+
+    if returned_state not in oauth_states:
+        return "Invalid OAuth state"
+
+    oauth_states.remove(returned_state)
+
+    print("RETURNED STATE:", returned_state)
+    
     code = request.args.get("code")
 
     if not code:
@@ -89,9 +107,8 @@ def callback():
     userinfo = userinfo_response.json()
     member_id = userinfo.get("sub")
 
-    with open(".env", "a", encoding="utf-8") as file:
-        file.write(f"\nLINKEDIN_ACCESS_TOKEN={access_token}\n")
-        file.write(f"LINKEDIN_MEMBER_ID={member_id}\n")
+    set_key(".env", "LINKEDIN_ACCESS_TOKEN", access_token)
+    set_key(".env", "LINKEDIN_MEMBER_ID", member_id)
 
     return redirect("/generate-post")
 
