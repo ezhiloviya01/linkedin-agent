@@ -27,18 +27,43 @@ TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 SCOPE = "openid profile w_member_social"
 
 
+
+@app.route("/", methods=["GET", "POST"])
+
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
         client_config = {
-            "client_name": request.form.get("client_name", ""),
-            "business_description": request.form.get("business_description", ""),
-            "products_services": request.form.get("products_services", ""),
-            "target_audience": request.form.get("target_audience", ""),
-            "brand_voice": request.form.get("brand_voice", ""),
-            "topics_to_post": request.form.get("topics_to_post", ""),
-            "topics_to_avoid": request.form.get("topics_to_avoid", ""),
-            "content_rules": request.form.get("content_rules", "")
+            "client_name": request.form.get("client_name", "").strip(),
+            "business_description": request.form.get("business_description", "").strip(),
+            "industry": request.form.get("industry", ""),
+            "company_size": request.form.get("company_size", ""),
+            "products_services": request.form.get("products_services", "").strip(),
+
+            # Questionnaire preferences
+            "content_goals": request.form.getlist("content_goals"),
+            "post_types": request.form.getlist("post_types"),
+            "posting_frequency": request.form.get("posting_frequency", ""),
+            "post_styles": request.form.getlist("post_styles"),
+            "target_audience": request.form.getlist("target_audience"),
+            "post_formats": request.form.getlist("post_formats"),
+
+            # Backend-controlled guardrails
+            "topics_to_avoid": [
+                "False information",
+                "Unverified claims",
+                "Confidential information",
+                "Private information",
+                "Offensive content",
+                "Unrelated topics",
+                "Attacking competitors"
+            ],
+            "content_rules": [
+                "Do not make unsupported claims",
+                "Do not share confidential or private information",
+                "Keep content professional and helpful",
+                "Never publish without human approval"
+            ]
         }
 
         with open("client_config.json", "w", encoding="utf-8") as file:
@@ -47,6 +72,8 @@ def home():
         return redirect("/login")
 
     return render_template("onboarding.html")
+
+
 
 
 @app.route("/login")
@@ -114,20 +141,32 @@ def callback():
 
     return f"OAuth failed: {token_data}"
 
+
 @app.route("/generate-post", methods=["GET", "POST"])
 def generate_post_page():
+    # Load the saved company profile and questionnaire preferences
+    with open("client_config.json", "r", encoding="utf-8") as file:
+        client_config = json.load(file)
+
     if request.method == "POST":
-        topic = request.form.get("topic", "")
+        topic = request.form.get("topic", "").strip()
 
         post = generate_post(topic)
 
         return render_template(
             "generate_post.html",
+            config=client_config,
             topic=topic,
             post=post
         )
 
-    return render_template("generate_post.html")
+    return render_template(
+        "generate_post.html",
+        config=client_config,
+        topic="",
+        post=None
+    )
+
 
 @app.route("/check-post", methods=["GET", "POST"])
 def check_post_page():

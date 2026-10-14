@@ -1,15 +1,23 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate LinkedIn Post</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 40px auto;
             padding: 20px;
             background: #f5f7fb;
+            color: #1f2937;
         }
 
         .form-box {
@@ -18,12 +26,13 @@
             border-radius: 12px;
         }
 
-        h1 {
+        h1, h2 {
             color: #1f2937;
         }
 
         p {
             color: #6b7280;
+            line-height: 1.6;
         }
 
         label {
@@ -33,65 +42,229 @@
             font-weight: bold;
         }
 
+        input[type="text"],
         textarea {
             width: 100%;
-            min-height: 120px;
             padding: 12px;
             border: 1px solid #d1d5db;
             border-radius: 6px;
-            box-sizing: border-box;
             font-size: 14px;
+            font-family: Arial, sans-serif;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .preferences {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+
+        .preference-item {
+            margin-top: 15px;
+        }
+
+        .preference-label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #4b5563;
+            margin-bottom: 6px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 7px 11px;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #1e40af;
+            font-size: 13px;
+        }
+
+        .empty-value {
+            color: #9ca3af;
+            font-size: 13px;
         }
 
         button {
             margin-top: 20px;
-            padding: 12px 24px;
+            margin-right: 8px;
+            padding: 12px 22px;
             background: #2563eb;
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
         }
 
         button:hover {
             background: #1d4ed8;
         }
+
+        .secondary-button {
+            background: #475569;
+        }
+
+        .secondary-button:hover {
+            background: #334155;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .error {
+            padding: 12px;
+            background: #fef2f2;
+            color: #991b1b;
+            border-radius: 6px;
+        }
+
+        .help-text {
+            font-size: 13px;
+        }
     </style>
 </head>
 
 <body>
+<div class="form-box">
 
-    <div class="form-box">
+    <h1>Generate LinkedIn Post</h1>
 
-        <h1>Generate LinkedIn Post</h1>
+    <p>
+        Enter a topic to create a LinkedIn draft using your saved
+        company profile and content preferences.
+    </p>
 
-        <p>
-            Enter a topic and the agent will create a LinkedIn post
-            using the client's configuration.
+    {% if config %}
+    <div class="preferences">
+        <h2>Your Content Preferences</h2>
+        <p class="help-text">
+            These preferences come from your client setup.
         </p>
 
-        <form method="POST">
+        {% set preference_fields = [
+            ("content_goals", "Content Goals"),
+            ("post_types", "Post Types"),
+            ("posting_frequency", "Posting Frequency"),
+            ("post_styles", "Writing Styles"),
+            ("target_audience", "Target Audience"),
+            ("post_formats", "Post Formats")
+        ] %}
 
-            <label>Post Topic</label>
+        {% for field, label_text in preference_fields %}
+        <div class="preference-item">
+            <div class="preference-label">{{ label_text }}</div>
+            {% set value = config.get(field, []) %}
+            {% if value is string %}
+                {% set values = [value] if value else [] %}
+            {% else %}
+                {% set values = value %}
+            {% endif %}
+
+            {% if values %}
+            <div class="tags">
+                {% for item in values %}
+                    <span class="tag">{{ item }}</span>
+                {% endfor %}
+            </div>
+            {% else %}
+                <span class="empty-value">Not configured</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/generate-post">
+
+        <label for="topic">What would you like to post about? *</label>
+
+        <textarea
+            id="topic"
+            name="topic"
+            placeholder="Example: How AI is changing digital marketing"
+            required
+        >{{ topic or "" }}</textarea>
+
+        <button type="submit" name="action" value="generate">
+            Generate Post
+        </button>
+
+    </form>
+
+    {% if post %}
+    <div class="result">
+        <h2>Generated LinkedIn Draft</h2>
+
+        <p class="help-text">
+            Review and edit the draft before checking it against the
+            backend guardrails.
+        </p>
+
+        <form method="POST" action="/check-post">
+            <label for="post">Edit your post</label>
 
             <textarea
-                name="topic"
-                placeholder="Example: Why businesses should invest in SEO"
+                id="post"
+                name="post"
                 required
-            ></textarea>
+            >{{ post }}</textarea>
 
-            <button type="submit">Generate Post</button>
-
+            <button type="submit">Check Guardrails</button>
         </form>
-        {% if post %}
-    <div class="result">
-        <h2>Generated LinkedIn Post</h2>
-        <p>{{ post }}</p>
-    </div>
-{% endif %}
 
+        <button
+            type="button"
+            class="secondary-button"
+            onclick="copyPost()"
+        >
+            Copy Draft
+        </button>
+
+        <p id="copy-status" class="help-text"></p>
     </div>
+    {% endif %}
+
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+
+</div>
+
+<script>
+    function copyPost() {
+        const postField = document.getElementById("post");
+        const status = document.getElementById("copy-status");
+
+        if (!postField) return;
+
+        navigator.clipboard.writeText(postField.value)
+            .then(function () {
+                status.textContent = "Draft copied.";
+            })
+            .catch(function () {
+                postField.select();
+                const copied = document.execCommand("copy");
+                status.textContent = copied
+                    ? "Draft copied."
+                    : "Please select and copy the draft manually.";
+            });
+    }
+</script>
 
 </body>
 </html>

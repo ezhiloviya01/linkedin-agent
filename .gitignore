@@ -1,3 +1,4 @@
 .env
 __pycache__/
 activity_log.txt
+*.py[cod]
