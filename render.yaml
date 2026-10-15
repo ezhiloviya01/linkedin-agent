@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: linkedin-agent
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --timeout 180 oauth_server:app

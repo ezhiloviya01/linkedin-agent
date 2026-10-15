@@ -1,19 +1,20 @@
 {
     "client_name": "BridgeE",
-    "business_description": "m",
+    "business_description": "e",
     "industry": "Marketing and Advertising",
     "company_size": "1\u201310 employees",
-    "products_services": "m",
+    "products_services": "e",
     "content_goals": [
         "Brand awareness"
     ],
     "post_types": [
-        "Educational posts",
-        "Industry insights"
+        "Educational posts"
     ],
     "posting_frequency": "Once a week",
     "post_styles": [
-        "Short and concise"
+        "Short and concise",
+        "Professional and informative",
+        "Friendly and conversational"
     ],
     "target_audience": [
         "Business owners"
