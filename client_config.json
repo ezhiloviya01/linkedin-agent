@@ -1,27 +1,33 @@
 {
     "client_name": "BridgeE",
-    "business_description": "e",
+    "user_role": "Marketing and AI Automation Intern",
+    "user_expertise": "Digital marketing, AI tools, website development, LinkedIn content creation, and marketing automation. I share practical learnings and insights from my work.",
+    "personal_branding_goal": "Share what I learn, build professional credibility, demonstrate my skills, and share useful insights about digital marketing and AI automation.",
+    "user_perspective": "First-person experiences and lessons",
+    "business_description": "BridgeE helps businesses with digital solutions, website development, digital marketing, and AI automation.",
     "industry": "Marketing and Advertising",
     "company_size": "1\u201310 employees",
-    "products_services": "e",
+    "products_services": "Website design and development, digital marketing, AI automation, and marketing solutions.",
     "content_goals": [
-        "Brand awareness"
+        "Thought leadership"
     ],
     "post_types": [
-        "Educational posts"
+        "Founder stories"
     ],
     "posting_frequency": "Once a week",
     "post_styles": [
-        "Short and concise",
-        "Professional and informative",
-        "Friendly and conversational"
+        "Question-led and engaging"
     ],
     "target_audience": [
-        "Business owners"
+        "Marketing professionals"
     ],
     "post_formats": [
-        "Text posts"
+        "Text with a call to action"
     ],
+    "schedule_days": {
+        "Monday": "00:38"
+    },
+    "timezone": "Asia/Kolkata",
     "topics_to_avoid": [
         "False information",
         "Unverified claims",

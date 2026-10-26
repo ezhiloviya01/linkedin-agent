@@ -108,15 +108,56 @@
             cursor: pointer;
         }
 
-        .option input {
+        .option input[type="checkbox"] {
             width: 16px;
             height: 16px;
+            flex-shrink: 0;
             accent-color: #2563eb;
         }
 
         .help-text {
             font-size: 12px;
             margin-top: 6px;
+        }
+
+        /* Automatic posting schedule */
+        .schedule-options {
+            margin-top: 20px;
+        }
+
+        .schedule-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin: 12px 0;
+        }
+
+        .schedule-day {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 130px;
+            cursor: pointer;
+        }
+
+        .schedule-day input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            accent-color: #2563eb;
+        }
+
+        .schedule-time {
+            width: 150px;
+            padding: 9px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .schedule-time:disabled {
+            background: #f3f4f6;
+            color: #9ca3af;
         }
 
         button {
@@ -132,6 +173,24 @@
 
         button:hover {
             background: #1d4ed8;
+        }
+
+        @media (max-width: 500px) {
+            .form-box {
+                padding: 20px;
+            }
+
+            .schedule-row {
+                gap: 10px;
+            }
+
+            .schedule-day {
+                width: 115px;
+            }
+
+            .schedule-time {
+                width: 130px;
+            }
         }
     </style>
 </head>
@@ -191,6 +250,30 @@
                   placeholder="Enter your products or services" required></textarea>
 
         <h2 class="section-title">LinkedIn Content Preferences</h2>
+
+        
+        <h2 class="section-title">Your Professional Persona</h2>
+
+        <label class="field-label" for="user_role">Your Professional Role *</label>
+        <input type="text" id="user_role" name="user_role"
+            placeholder="e.g., Founder, Marketing Manager, Software Engineer" required>
+
+        <label class="field-label" for="user_expertise">Your Expertise *</label>
+        <textarea id="user_expertise" name="user_expertise"
+                placeholder="What topics or skills do you have experience in?" required></textarea>
+
+        <label class="field-label" for="personal_branding_goal">Your Personal Branding Goal *</label>
+        <textarea id="personal_branding_goal" name="personal_branding_goal"
+                placeholder="e.g., Share expertise, build credibility, attract clients" required></textarea>
+
+        <label class="field-label" for="user_perspective">Your Writing Perspective *</label>
+        <select id="user_perspective" name="user_perspective" required>
+            <option value="">Select writing perspective</option>
+            <option>First-person experiences and lessons</option>
+            <option>Expert insights and opinions</option>
+            <option>Educational advice and practical tips</option>
+            <option>Industry analysis and observations</option>
+        </select>
 
         <label class="field-label">What is the main goal of your LinkedIn content? *</label>
         <details class="multi-dropdown" data-group="content_goals">
@@ -281,12 +364,50 @@
         </details>
         <p class="help-text">Choose one or more formats.</p>
 
+        <h2 class="section-title">Automatic Posting Schedule</h2>
+        <p>Select the days and times when you want approved LinkedIn posts to be published.</p>
+
+        <div class="schedule-options">
+            {% for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] %}
+                <div class="schedule-row">
+                    <label class="schedule-day">
+                        <input type="checkbox"
+                               name="schedule_days"
+                               value="{{ day }}"
+                               class="schedule-checkbox">
+                        <span>{{ day }}</span>
+                    </label>
+
+                    <input type="time"
+                           name="time_{{ day }}"
+                           value="22:00"
+                           class="schedule-time"
+                           disabled>
+                </div>
+            {% endfor %}
+        </div>
+
+        <p class="help-text">
+            Select your preferred days and set a time for each. Times default to 10:00 PM.
+        </p>
+
         <button type="submit">Save Preferences &amp; Continue</button>
     </form>
 </div>
 
-
 <script>
+    // Enable the time picker only when its day is selected.
+    document.querySelectorAll(".schedule-checkbox").forEach(function (checkbox) {
+        checkbox.addEventListener("change", function () {
+            const row = checkbox.closest(".schedule-row");
+            const timeInput = row.querySelector(".schedule-time");
+
+            timeInput.disabled = !checkbox.checked;
+            timeInput.required = checkbox.checked;
+        });
+    });
+
+    // Update the content preference dropdown labels.
     document.querySelectorAll(".multi-dropdown").forEach(function (dropdown) {
         const summary = dropdown.querySelector("summary");
         const originalText = summary.textContent.trim();
@@ -310,6 +431,7 @@
         updateSummary();
     });
 
+    // Require at least one selection in each content preference group.
     document.getElementById("onboarding-form").addEventListener("submit", function (event) {
         const groups = [
             ["content_goals", "Please select at least one content goal."],
@@ -326,7 +448,6 @@
 
             if (selected.length === 0) {
                 event.preventDefault();
-
                 alert(message);
 
                 const dropdown = document.querySelector(
@@ -341,6 +462,19 @@
 
                 return;
             }
+        }
+
+        const selectedDays = document.querySelectorAll(
+            'input[name="schedule_days"]:checked'
+        );
+
+        if (selectedDays.length === 0) {
+            event.preventDefault();
+            alert("Please select at least one posting day.");
+            document.querySelector(".schedule-options").scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
         }
     });
 </script>

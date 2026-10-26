@@ -1,14 +1,16 @@
-import os
+
 import requests
 from dotenv import load_dotenv
 from activity_log import log_activity
-from flask import session
 
 load_dotenv(override=True)
 
+LINKEDIN_POSTS_URL = "https://api.linkedin.com/rest/posts"
+
 
 def publish_post(post):
-    load_dotenv(override=True)
+    """Publish immediately using the current Flask session."""
+    from flask import session
 
     access_token = session.get("LINKEDIN_ACCESS_TOKEN")
     member_id = session.get("LINKEDIN_MEMBER_ID")
@@ -19,7 +21,23 @@ def publish_post(post):
     if not member_id:
         return "Publishing failed: LinkedIn member ID not found."
 
-    url = "https://api.linkedin.com/rest/posts"
+    return publish_post_with_credentials(
+        post,
+        access_token,
+        member_id
+    )
+
+
+def publish_post_with_credentials(post, access_token, member_id):
+    """Publish using explicit LinkedIn credentials, for background jobs."""
+    if not post:
+        return "Publishing failed: Post content is empty."
+
+    if not access_token:
+        return "Publishing failed: LinkedIn access token not found."
+
+    if not member_id:
+        return "Publishing failed: LinkedIn member ID not found."
 
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -39,10 +57,9 @@ def publish_post(post):
         "isReshareDisabledByAuthor": False
     }
 
-
     try:
         response = requests.post(
-            url,
+            LINKEDIN_POSTS_URL,
             headers=headers,
             json=data,
             timeout=30

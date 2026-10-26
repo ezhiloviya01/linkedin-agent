@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduled Post Approvals</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f7fb;
+        }
+        .card {
+            background: white;
+            padding: 24px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+        }
+        .post {
+            background: #f3f4f6;
+            padding: 16px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+        button {
+            margin-top: 12px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }
+        .approve { background: #16a34a; }
+        .reject { background: #dc2626; margin-left: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Scheduled Post Approvals</h1>
+
+    {% if posts %}
+        {% for post in posts %}
+            <div class="card">
+                <h3>Post #{{ post.id }}</h3>
+                <p>
+                    <strong>Scheduled:</strong>
+                    {{ post.scheduled_day }} at {{ post.scheduled_time }}
+                    ({{ post.timezone }})
+                </p>
+                <div class="post">{{ post.post_text }}</div>
+
+                <form method="POST"
+                      action="{{ url_for('approve_scheduled', post_id=post.id) }}">
+                    <button class="approve" type="submit">Approve</button>
+                </form>
+
+                <form method="POST"
+                      action="{{ url_for('reject_scheduled', post_id=post.id) }}">
+                    <button class="reject" type="submit">Reject</button>
+                </form>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card">
+            <p>No scheduled posts are waiting for approval.</p>
+        </div>
+    {% endif %}
+</body>
+</html>

@@ -1,10 +1,11 @@
 
 import json
 import os
+import time
 
 from dotenv import load_dotenv
 from google import genai
-# from google.genai import errors
+from google.genai.errors import ServerError
 
 load_dotenv()
 
@@ -34,6 +35,20 @@ Company size:
 
 Products and services:
 {json.dumps(client_config.get("products_services", ""))}
+
+USER PERSONA
+Professional role:
+{client_config.get("user_role", "")}
+
+Areas of expertise:
+{client_config.get("user_expertise", "")}
+
+Personal branding goal:
+{client_config.get("personal_branding_goal", "")}
+
+Preferred writing perspective:
+{client_config.get("user_perspective", "")}
+
 
 CONTENT PREFERENCES
 Main content goals:
@@ -66,34 +81,56 @@ Create one LinkedIn post draft about:
 {topic}
 
 INSTRUCTIONS
-- Align the post with the selected content goals and post types.
-- Write for the selected target audiences.
-- Follow all selected writing styles.
-- Respect the preferred post formats when drafting the content.
-- Consider the posting frequency as part of the overall content strategy.
-- Keep the content relevant to the company's industry and services.
-- Do not invent statistics, facts, customer stories, or unsupported claims.
+- Write like an experienced marketing professional sharing genuine insights on LinkedIn, not like an AI generating generic content.
+- Start with a strong, natural hook that makes the reader want to continue.
+- Use conversational, professional language that sounds authentic and human.
+- Share specific, useful insights relevant to the company's industry, products, services, and target audience.
+- Explain ideas clearly using natural sentence structures and varied sentence lengths.
+- Avoid clichés, exaggerated claims, robotic transitions, repetitive phrases, and generic motivational statements.
+- Avoid formulaic openings such as "In today's fast-paced digital world" and "In an ever-evolving landscape."
+- Do not force numbered lists, excessive bullet points, emojis, or hashtags. Use them only when they genuinely improve the post.
+- Avoid making every post follow the same structure.
+- Use only one blank line between paragraphs.
+- Do not add multiple consecutive blank lines or unnecessary spacing.
+- Keep the post concise, engaging, and suitable for LinkedIn.
+- End naturally with a meaningful takeaway or relevant question when appropriate.
+- Align the post with the user's professional role, expertise, personal branding goal, and preferred writing perspective.
+- Also follow the company's content goals, post types, writing styles, target audience, and post formats.- Respect all backend-controlled guardrails and topics to avoid.
+- Never invent statistics, facts, customer stories, or unsupported claims.
 - Do not reveal confidential or private information.
-- Follow every backend-controlled guardrail.
 - Do not publish the post. Generate a draft for human review.
 - Return only the LinkedIn post draft, without explanations.
 """
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.7-flash",
-            contents=prompt
-        )
-        return response.text or "Gemini returned an empty response. Please try again."
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.5-flash-lite",
+                contents=prompt
+            )
 
-    
-    except Exception as exc:
-        print("Gemini error:", repr(exc))
-        return (
-            "Post generation failed. Please check the VS Code terminal "
-            "for the error details."
-        )
+            return response.text or (
+                "Gemini returned an empty response. Please try again."
+            )
 
+        except ServerError as exc:
+            print(f"Gemini server error on attempt {attempt + 1}: {exc}")
+
+            if attempt == 2:
+                print("Gemini remained unavailable after 3 attempts.")
+                return (
+                    "Gemini is temporarily unavailable. Please wait a "
+                    "little while and try generating your post again."
+                )
+
+            time.sleep(2 * (attempt + 1))
+
+        except Exception as exc:
+            print("Gemini error:", repr(exc))
+            return (
+                "Post generation failed. Please check the VS Code terminal "
+                "for the error details."
+            )
 
 
 if __name__ == "__main__":
