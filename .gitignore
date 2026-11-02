@@ -2,3 +2,6 @@
 __pycache__/
 activity_log.txt
 *.py[cod]
+scheduled_posts.db
+*.db
+/linkedin-agent/

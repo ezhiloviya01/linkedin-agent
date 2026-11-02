@@ -2,6 +2,8 @@
 import requests
 from dotenv import load_dotenv
 from activity_log import log_activity
+from flask import session
+from scheduler import get_linkedin_credentials
 
 load_dotenv(override=True)
 
@@ -9,17 +11,19 @@ LINKEDIN_POSTS_URL = "https://api.linkedin.com/rest/posts"
 
 
 def publish_post(post):
-    """Publish immediately using the current Flask session."""
-    from flask import session
+    """Publish immediately using stored LinkedIn credentials."""
 
-    access_token = session.get("LINKEDIN_ACCESS_TOKEN")
     member_id = session.get("LINKEDIN_MEMBER_ID")
-
-    if not access_token:
-        return "Publishing failed: LinkedIn access token not found."
 
     if not member_id:
         return "Publishing failed: LinkedIn member ID not found."
+
+    credentials = get_linkedin_credentials(member_id)
+
+    if not credentials:
+        return "Publishing failed: Please reconnect your LinkedIn account."
+
+    access_token = credentials["access_token"]
 
     return publish_post_with_credentials(
         post,
@@ -30,6 +34,7 @@ def publish_post(post):
 
 def publish_post_with_credentials(post, access_token, member_id):
     """Publish using explicit LinkedIn credentials, for background jobs."""
+
     if not post:
         return "Publishing failed: Post content is empty."
 
@@ -69,12 +74,22 @@ def publish_post_with_credentials(post, access_token, member_id):
             log_activity("Publish Post", "SUCCESS", post)
             return "Post published successfully on LinkedIn."
 
-        log_activity("Publish Post", "FAILED", post)
-        return (
+        if response.status_code == 401:
+            error_message = (
+                "LinkedIn access token has expired or is invalid. "
+                "Please reconnect your LinkedIn account."
+            )
+            log_activity("Publish Post", "FAILED", error_message)
+            return error_message
+
+        error_message = (
             f"Publishing failed: HTTP {response.status_code} - "
             f"{response.text}"
         )
+        log_activity("Publish Post", "FAILED", error_message)
+        return error_message
 
     except requests.RequestException as exc:
-        log_activity("Publish Post", "FAILED", post)
-        return f"Publishing failed due to a network error: {exc}"
+        error_message = f"Publishing failed due to a network error: {exc}"
+        log_activity("Publish Post", "FAILED", error_message)
+        return error_message

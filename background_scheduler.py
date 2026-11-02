@@ -1,14 +1,15 @@
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from scheduler import (
     init_db,
     claim_due_posts,
+    get_linkedin_credentials,
     mark_published,
     mark_publish_failed
 )
+
 from publish import publish_post_with_credentials
 
 TIMEZONE = ZoneInfo("Asia/Kolkata")
@@ -20,18 +21,31 @@ def check_schedules():
 
     try:
         due_posts = claim_due_posts()
-    except Exception:
-        print("Could not retrieve due posts.")
+    except Exception as exc:
+        print(f"Could not retrieve due posts: {exc}")
         raise
 
     for post in due_posts:
         post_id = post["id"]
 
         try:
+            # Retrieve credentials and check token expiry.
+            credentials = get_linkedin_credentials(post["user_id"])
+
+            if credentials is None:
+                error_message = (
+                    "LinkedIn access token is missing or expired. "
+                    "Please reconnect your LinkedIn account."
+                )
+
+                mark_publish_failed(post_id, error_message)
+                print(f"Scheduled post {post_id} failed: {error_message}")
+                continue
+
             result = publish_post_with_credentials(
                 post["post_text"],
-                post["access_token"],
-                post["member_id"]
+                credentials["access_token"],
+                credentials["member_id"]
             )
 
             if result == "Post published successfully on LinkedIn.":
@@ -51,6 +65,7 @@ def start_scheduler():
     init_db()
 
     scheduler = BackgroundScheduler(timezone=TIMEZONE)
+
     scheduler.add_job(
         check_schedules,
         trigger="interval",
@@ -59,19 +74,23 @@ def start_scheduler():
         replace_existing=True,
         max_instances=1
     )
+
     scheduler.start()
     return scheduler
 
 
 if __name__ == "__main__":
     running_scheduler = start_scheduler()
+
     print("Background scheduler started. Checking approved posts every minute.")
 
     try:
         check_schedules()
+
         while True:
             import time
             time.sleep(60)
+
     except (KeyboardInterrupt, SystemExit):
         running_scheduler.shutdown()
         print("Background scheduler stopped.")

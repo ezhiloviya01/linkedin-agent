@@ -1,8 +1,86 @@
-
 import sqlite3
 import json
+import os
+from dotenv import load_dotenv
+from cryptography.fernet import Fernet
+from datetime import datetime, timedelta, timezone
+
+load_dotenv()
+
+TOKEN_ENCRYPTION_KEY = os.getenv("TOKEN_ENCRYPTION_KEY")
+fernet = Fernet(TOKEN_ENCRYPTION_KEY.encode()) if TOKEN_ENCRYPTION_KEY else None
 
 DATABASE = "scheduled_posts.db"
+
+
+def encrypt_token(token):
+    if not token:
+        return token
+    if fernet is None:
+        raise RuntimeError("TOKEN_ENCRYPTION_KEY is missing from .env")
+    return fernet.encrypt(token.encode()).decode()
+
+
+def decrypt_token(token):
+    if not token:
+        return token
+    if fernet is None:
+        raise RuntimeError("TOKEN_ENCRYPTION_KEY is missing from .env")
+    return fernet.decrypt(token.encode()).decode()
+
+def save_linkedin_credentials(member_id, access_token, expires_in):
+    token_expires_at = (
+        datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+    ).isoformat()
+
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute("""
+            INSERT INTO linkedin_credentials
+            (user_id, access_token, token_expires_at, member_id)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                access_token = excluded.access_token,
+                token_expires_at = excluded.token_expires_at,
+                member_id = excluded.member_id,
+                updated_at = CURRENT_TIMESTAMP
+        """, (
+            member_id,
+            encrypt_token(access_token),
+            token_expires_at,
+            member_id
+        ))
+def get_linkedin_credentials(member_id):
+    with sqlite3.connect(DATABASE) as conn:
+        row = conn.execute("""
+            SELECT access_token, token_expires_at, member_id
+            FROM linkedin_credentials
+            WHERE user_id = ?
+        """, (member_id,)).fetchone()
+
+    if row is None:
+        return None
+
+    access_token = decrypt_token(row[0])
+    token_expires_at = row[1]
+
+    if not token_expires_at:
+        return None
+
+    expiry_time = datetime.fromisoformat(token_expires_at)
+
+    if expiry_time.tzinfo is None:
+        expiry_time = expiry_time.replace(tzinfo=timezone.utc)
+
+    if datetime.now(timezone.utc) >= expiry_time - timedelta(minutes=5):
+        return None
+
+    return {
+        "access_token": access_token,
+        "token_expires_at": token_expires_at,
+        "member_id": row[2]
+    }
+
+
 
 
 def init_db():
@@ -22,6 +100,7 @@ def init_db():
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS posting_schedules (
                 user_id TEXT PRIMARY KEY,
@@ -30,23 +109,55 @@ def init_db():
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        # Add exact date/time and credentials for background publishing.
-        columns = {
-            row[1] for row in
-            conn.execute("PRAGMA table_info(scheduled_posts)")
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS linkedin_credentials (
+                user_id TEXT PRIMARY KEY,
+                access_token TEXT NOT NULL,
+                token_expires_at TEXT,
+                member_id TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Check and update LinkedIn credentials table
+        credential_columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(linkedin_credentials)"
+            )
         }
-        if "scheduled_at" not in columns:
+
+        if "token_expires_at" not in credential_columns:
             conn.execute(
-                "ALTER TABLE scheduled_posts ADD COLUMN scheduled_at TEXT"
+                "ALTER TABLE linkedin_credentials ADD COLUMN token_expires_at TEXT"
             )
-        if "access_token" not in columns:
-            conn.execute(
-                "ALTER TABLE scheduled_posts ADD COLUMN access_token TEXT"
+
+        # Check and update scheduled_posts table
+        required_columns = {
+            "user_id": "TEXT NOT NULL DEFAULT ''",
+            "scheduled_at": "TEXT",
+            "access_token": "TEXT",
+            "member_id": "TEXT",
+            "approved_at": "TEXT",
+            "published_at": "TEXT",
+            "last_error": "TEXT",
+            "created_at": "TEXT",
+        }
+
+        columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(scheduled_posts)"
             )
-        if "member_id" not in columns:
-            conn.execute(
-                "ALTER TABLE scheduled_posts ADD COLUMN member_id TEXT"
-            )
+        }
+
+        for name, data_type in required_columns.items():
+            if name not in columns:
+                conn.execute(
+                    f"ALTER TABLE scheduled_posts ADD COLUMN {name} {data_type}"
+                )
+                print(f"Added column: {name}")
 
 
 def add_scheduled_post(
@@ -63,7 +174,7 @@ def add_scheduled_post(
             VALUES (?, ?, ?, ?, ?, 'pending_approval', ?, ?, ?)
         """, (
             str(user_id), post_text, scheduled_day, scheduled_time,
-            timezone, scheduled_at, access_token, member_id
+            timezone, scheduled_at, encrypt_token(access_token), member_id
         ))
         return cursor.lastrowid
 
@@ -136,11 +247,12 @@ def get_pending_scheduled_posts(user_id=None):
     ]
 
 
+
 def claim_due_posts():
     """Claim approved posts due now, preventing duplicate publishing."""
     with sqlite3.connect(DATABASE) as conn:
         rows = conn.execute("""
-            SELECT id, post_text, access_token, member_id
+            SELECT id, user_id, post_text
             FROM scheduled_posts
             WHERE status = 'approved'
               AND scheduled_at IS NOT NULL
@@ -148,17 +260,23 @@ def claim_due_posts():
         """).fetchall()
 
         claimed = []
-        for post_id, post_text, token, member_id in rows:
+
+        for post_id, user_id, post_text in rows:
             cursor = conn.execute("""
-                UPDATE scheduled_posts SET status = 'publishing'
+                UPDATE scheduled_posts
+                SET status = 'publishing'
                 WHERE id = ? AND status = 'approved'
             """, (post_id,))
+
             if cursor.rowcount == 1:
                 claimed.append({
-                    "id": post_id, "post_text": post_text,
-                    "access_token": token, "member_id": member_id
+                    "id": post_id,
+                    "user_id": user_id,
+                    "post_text": post_text
                 })
+
         return claimed
+
 
 
 def mark_published(post_id):

@@ -35,6 +35,10 @@ from scheduler import (
     get_pending_scheduled_posts,
     get_schedule
 )
+from scheduler import (
+    save_linkedin_credentials,
+    get_linkedin_credentials
+)
 
 
 load_dotenv()
@@ -255,7 +259,12 @@ def callback():
         if not member_id:
             return "LinkedIn member ID was not returned.", 400
 
-        session["LINKEDIN_ACCESS_TOKEN"] = access_token
+        expires_in = token_data.get("expires_in")
+
+        if not expires_in:
+             return "LinkedIn token expiry information was not received.", 400
+
+        save_linkedin_credentials(member_id, access_token, expires_in)
         session["LINKEDIN_MEMBER_ID"] = member_id
 
         return redirect("/generate-post")
@@ -353,8 +362,13 @@ def approve():
     if not pending_post:
         return "No pending post available. Generate and check a post again.", 400
 
-    access_token = session.get("LINKEDIN_ACCESS_TOKEN")
     member_id = session.get("LINKEDIN_MEMBER_ID")
+    credentials = get_linkedin_credentials(member_id) if member_id else None
+
+    if not credentials:
+        return "Please reconnect your LinkedIn account.", 401
+
+    access_token = credentials["access_token"]
 
     if not access_token or not member_id:
         return "Please reconnect your LinkedIn account.", 401
@@ -413,7 +427,7 @@ def approve():
         scheduled_day=scheduled_time.strftime("%A"),
         scheduled_time=scheduled_time.strftime("%H:%M"),
         timezone=str(timezone),
-        user_id=client_name,
+        user_id=member_id,
         scheduled_at=scheduled_at,
         access_token=access_token,
         member_id=member_id
