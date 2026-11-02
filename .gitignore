@@ -5,3 +5,4 @@ activity_log.txt
 scheduled_posts.db
 *.db
 /linkedin-agent/
+client_config.json
