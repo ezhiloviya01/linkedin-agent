@@ -13,10 +13,7 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
-def generate_post(topic):
-    # Load the latest client configuration
-    with open("client_config.json", "r", encoding="utf-8") as file:
-        client_config = json.load(file)
+def generate_post(topic, client_config):
 
     prompt = f"""
 You are a LinkedIn content writer for the following company.
@@ -173,10 +170,3 @@ INSTRUCTIONS
                 "for the error details."
             )
 
-
-if __name__ == "__main__":
-    topic = input("Enter a topic for the LinkedIn post: ")
-    post = generate_post(topic)
-
-    print("\n--- GENERATED LINKEDIN POST ---\n")
-    print(post)

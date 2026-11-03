@@ -1,4 +1,3 @@
-
 import os
 import json
 import secrets
@@ -8,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 from flask import (
     Flask,
+    config,
     redirect,
     request,
     render_template,
@@ -33,7 +33,10 @@ from scheduler import (
     approve_scheduled_post,
     reject_scheduled_post,
     get_pending_scheduled_posts,
-    get_schedule
+    get_failed_scheduled_posts,
+    get_schedule,
+    save_client_config,
+    get_client_config
 )
 from scheduler import (
     save_linkedin_credentials,
@@ -103,12 +106,7 @@ def home():
         if not days_and_times:
             return "Please select at least one posting day and time.", 400
 
-        # Save the recurring schedule in SQLite.
-        save_schedule(
-            user_id=client_name,
-            days_and_times=days_and_times,
-            timezone="Asia/Kolkata"
-        )
+        
 
         # Save the existing company and content preferences.
         client_config = {
@@ -157,8 +155,7 @@ def home():
             ]
         }
 
-        with open("client_config.json", "w", encoding="utf-8") as file:
-            json.dump(client_config, file, indent=4)
+        session["pending_client_config"] = client_config
 
         return redirect("/login")
 
@@ -267,6 +264,19 @@ def callback():
         save_linkedin_credentials(member_id, access_token, expires_in)
         session["LINKEDIN_MEMBER_ID"] = member_id
 
+        client_config = session.pop("pending_client_config", None)
+
+        if not client_config:
+            return "Client configuration not found. Please complete onboarding again.", 400
+
+        save_client_config(member_id, client_config)
+
+        save_schedule(
+            user_id=member_id,
+            days_and_times=client_config.get("schedule_days", {}),
+            timezone="Asia/Kolkata"
+        )
+
         return redirect("/generate-post")
 
     except (requests.RequestException, ValueError):
@@ -276,14 +286,18 @@ def callback():
 
 @app.route("/generate-post", methods=["GET", "POST"])
 def generate_post_page():
-    try:
-        with open("client_config.json", "r", encoding="utf-8") as file:
-            client_config = json.load(file)
-    except (OSError, json.JSONDecodeError):
-        return redirect("/")
+        member_id = session.get("LINKEDIN_MEMBER_ID")
 
-    if request.method == "POST":
-        topic = request.form.get("topic", "").strip()
+        if not member_id:
+            return redirect("/")
+
+        client_config = get_client_config(member_id)
+
+        if not client_config:
+            return "Client configuration not found. Please complete onboarding again.", 404
+
+        if request.method == "POST":
+            topic = request.form.get("topic", "").strip()
 
         if not topic:
             return render_template(
@@ -293,7 +307,7 @@ def generate_post_page():
                 post="Please enter a topic before generating a post."
             )
 
-        post = generate_post(topic)
+        post = generate_post(topic, client_config)
 
         return render_template(
             "generate_post.html",
@@ -302,16 +316,26 @@ def generate_post_page():
             post=post
         )
 
-    return render_template(
-        "generate_post.html",
-        config=client_config,
-        topic="",
-        post=None
+        return render_template(
+            "generate_post.html",
+            config=client_config,
+            topic="",
+            post=None
     )
 
 
 @app.route("/check-post", methods=["GET", "POST"])
 def check_post_page():
+    member_id = session.get("LINKEDIN_MEMBER_ID")
+
+    if not member_id:
+        return redirect("/")
+
+    client_config = get_client_config(member_id)
+
+    if not client_config:
+        return "Client configuration not found. Please complete onboarding again.", 404
+
     if request.method == "POST":
         post = request.form.get("post", "").strip()
 
@@ -322,7 +346,7 @@ def check_post_page():
                 result="FAIL: The post is empty."
             )
 
-        result = check_post(post)
+        result = check_post(post, client_config)
 
         if result.strip().startswith("PASS"):
             set_pending_post(post, result)
@@ -373,14 +397,12 @@ def approve():
     if not access_token or not member_id:
         return "Please reconnect your LinkedIn account.", 401
 
-    try:
-        with open("client_config.json", "r", encoding="utf-8") as file:
-            config = json.load(file)
-    except (OSError, json.JSONDecodeError):
-        return "Could not read client configuration.", 500
+    config = get_client_config(member_id)
 
-    client_name = config.get("client_name", "").strip()
-    schedule = get_schedule(client_name) if client_name else None
+    if not config:
+         return "Could not read client configuration.", 500
+
+    schedule = get_schedule(member_id)
 
     if not schedule or not schedule.get("days_and_times"):
         return "No posting schedule found. Configure your schedule first.", 400
@@ -429,7 +451,6 @@ def approve():
         timezone=str(timezone),
         user_id=member_id,
         scheduled_at=scheduled_at,
-        access_token=access_token,
         member_id=member_id
     )
 
@@ -476,9 +497,12 @@ def approve_scheduled(post_id):
 @app.route("/scheduled-approvals")
 def scheduled_approvals():
     posts = get_pending_scheduled_posts()
+    failed_posts = get_failed_scheduled_posts()
+
     return render_template(
         "scheduled_approvals.html",
-        posts=posts
+        posts=posts,
+        failed_posts=failed_posts
     )
 
 

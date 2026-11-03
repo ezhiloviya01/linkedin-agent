@@ -21,18 +21,10 @@ BACKEND_GUARDRAILS = [
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
-def check_post(post):
+def check_post(post, client_config):
     # Reject an empty post
     if not post or not post.strip():
         return "FAIL\nThe post is empty. Please provide content to check."
-
-    # Load the latest client configuration
-    try:
-        with open("client_config.json", "r", encoding="utf-8") as file:
-            client_config = json.load(file)
-    except (OSError, json.JSONDecodeError) as exc:
-        print("Client configuration error:", repr(exc))
-        return "FAIL\nUnable to load the client configuration."
 
     prompt = f"""
 You are a strict LinkedIn content guardrail checker.
@@ -94,9 +86,3 @@ Do not assume that a claim is true without supporting information.
             "The AI guardrail service is temporarily unavailable. "
             "Please wait a minute and try again. The post has not been approved."
         )
-
-
-if __name__ == "__main__":
-    test_post = input("Enter a LinkedIn post to check: ")
-    print("\n--- GUARDRAIL RESULT ---\n")
-    print(check_post(test_post))

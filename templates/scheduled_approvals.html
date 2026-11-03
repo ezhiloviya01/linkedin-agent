@@ -35,6 +35,18 @@
         }
         .approve { background: #16a34a; }
         .reject { background: #dc2626; margin-left: 8px; }
+        .failed {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .error {
+            color: #b91c1c;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -67,5 +79,24 @@
             <p>No scheduled posts are waiting for approval.</p>
         </div>
     {% endif %}
+        <h1>Failed Scheduled Posts</h1>
+
+    {% if failed_posts %}
+        {% for post in failed_posts %}
+            <div class="card failed">
+                <h3>Post #{{ post.id }}</h3>
+
+                <div class="post">{{ post.post_text }}</div>
+
+                <p><strong>Failure reason:</strong></p>
+                <p class="error">{{ post.last_error }}</p>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card">
+            <p>No failed scheduled posts.</p>
+        </div>
+    {% endif %}
+
 </body>
 </html>

@@ -120,6 +120,14 @@ def init_db():
             )
         """)
 
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS client_configs (
+                user_id TEXT PRIMARY KEY,
+                config_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # Check and update LinkedIn credentials table
         credential_columns = {
             row[1]
@@ -297,6 +305,64 @@ def mark_publish_failed(post_id, error):
         """, (str(error), post_id))
 
 
+
+def get_failed_scheduled_posts(user_id=None):
+    with sqlite3.connect(DATABASE) as conn:
+        query = """
+            SELECT id, user_id, post_text, scheduled_day,
+                   scheduled_time, timezone, status, last_error
+            FROM scheduled_posts
+            WHERE status = 'failed'
+        """
+        params = ()
+
+        if user_id is not None:
+            query += " AND user_id = ?"
+            params = (str(user_id),)
+
+        query += " ORDER BY id DESC"
+        rows = conn.execute(query, params).fetchall()
+
+    return [
+        {
+            "id": r[0],
+            "user_id": r[1],
+            "post_text": r[2],
+            "scheduled_day": r[3],
+            "scheduled_time": r[4],
+            "timezone": r[5],
+            "status": r[6],
+            "last_error": r[7],
+        }
+        for r in rows
+    ]
+
+def save_client_config(user_id, config):
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute("""
+            INSERT INTO client_configs (user_id, config_json)
+            VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                config_json = excluded.config_json,
+                updated_at = CURRENT_TIMESTAMP
+        """, (str(user_id), json.dumps(config)))
+
+
+def get_client_config(user_id):
+    with sqlite3.connect(DATABASE) as conn:
+        row = conn.execute("""
+            SELECT config_json
+            FROM client_configs
+            WHERE user_id = ?
+        """, (str(user_id),)).fetchone()
+
+    if row is None:
+        return None
+
+    return json.loads(row[0])
+
 if __name__ == "__main__":
     init_db()
     print("Scheduling database initialized successfully.")
+
+
