@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+import psycopg2
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 from datetime import datetime, timedelta, timezone
@@ -10,8 +11,7 @@ load_dotenv()
 TOKEN_ENCRYPTION_KEY = os.getenv("TOKEN_ENCRYPTION_KEY")
 fernet = Fernet(TOKEN_ENCRYPTION_KEY.encode()) if TOKEN_ENCRYPTION_KEY else None
 
-DATABASE = "scheduled_posts.db"
-
+DATABASE = os.getenv("DATABASE_PATH", "scheduled_posts.db")
 
 def encrypt_token(token):
     if not token:
@@ -338,31 +338,47 @@ def get_failed_scheduled_posts(user_id=None):
     ]
 
 def save_client_config(user_id, config):
-    with sqlite3.connect(DATABASE) as conn:
-        conn.execute("""
-            INSERT INTO client_configs (user_id, config_json)
-            VALUES (?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET
-                config_json = excluded.config_json,
-                updated_at = CURRENT_TIMESTAMP
-        """, (str(user_id), json.dumps(config)))
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is missing from environment")
+
+    with psycopg2.connect(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS client_configs (
+                    user_id TEXT PRIMARY KEY,
+                    config_json JSONB NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                INSERT INTO client_configs (user_id, config_json)
+                VALUES (%s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    config_json = EXCLUDED.config_json,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (str(user_id), json.dumps(config)))
 
 
 def get_client_config(user_id):
-    with sqlite3.connect(DATABASE) as conn:
-        row = conn.execute("""
-            SELECT config_json
-            FROM client_configs
-            WHERE user_id = ?
-        """, (str(user_id),)).fetchone()
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is missing from environment")
+
+    with psycopg2.connect(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT config_json
+                FROM client_configs
+                WHERE user_id = %s
+            """, (str(user_id),))
+
+            row = cur.fetchone()
 
     if row is None:
         return None
 
-    return json.loads(row[0])
-
-if __name__ == "__main__":
-    init_db()
-    print("Scheduling database initialized successfully.")
-
-
+    return row[0]

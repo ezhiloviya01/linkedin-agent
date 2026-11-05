@@ -286,18 +286,18 @@ def callback():
 
 @app.route("/generate-post", methods=["GET", "POST"])
 def generate_post_page():
-        member_id = session.get("LINKEDIN_MEMBER_ID")
+    member_id = session.get("LINKEDIN_MEMBER_ID")
 
-        if not member_id:
-            return redirect("/")
+    if not member_id:
+        return redirect("/")
 
-        client_config = get_client_config(member_id)
+    client_config = get_client_config(member_id)
 
-        if not client_config:
-            return "Client configuration not found. Please complete onboarding again.", 404
+    if not client_config:
+        return "Client configuration not found. Please complete onboarding again.", 404
 
-        if request.method == "POST":
-            topic = request.form.get("topic", "").strip()
+    if request.method == "POST":
+        topic = request.form.get("topic", "").strip()
 
         if not topic:
             return render_template(
@@ -316,11 +316,11 @@ def generate_post_page():
             post=post
         )
 
-        return render_template(
-            "generate_post.html",
-            config=client_config,
-            topic="",
-            post=None
+    return render_template(
+        "generate_post.html",
+        config=client_config,
+        topic="",
+        post=None
     )
 
 
