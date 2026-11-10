@@ -13,6 +13,7 @@ from flask import (
     render_template,
     session
 )
+
 from dotenv import load_dotenv
 from urllib.parse import urlencode
 
@@ -379,6 +380,7 @@ def approval_page():
 
 
 
+
 @app.route("/approve", methods=["POST"])
 def approve():
     pending_post, result = get_pending_post()
@@ -400,72 +402,105 @@ def approve():
     config = get_client_config(member_id)
 
     if not config:
-         return "Could not read client configuration.", 500
+        return "Could not read client configuration.", 500
 
-    schedule = get_schedule(member_id)
+    approval_action = request.form.get("approval_action")
 
-    if not schedule or not schedule.get("days_and_times"):
-        return "No posting schedule found. Configure your schedule first.", 400
+    # Option 1: Publish immediately
+    if approval_action == "publish":
+        from publish import publish_post_with_credentials
 
-    timezone = ZoneInfo(schedule.get("timezone", "Asia/Kolkata"))
-    now = datetime.now(timezone)
-    weekdays = [
-        "Monday", "Tuesday", "Wednesday", "Thursday",
-        "Friday", "Saturday", "Sunday"
-    ]
-    candidates = []
-
-    for day, time_str in schedule["days_and_times"].items():
-        try:
-            hour, minute = map(int, time_str.split(":"))
-            days_ahead = (weekdays.index(day) - now.weekday()) % 7
-
-            candidate = (now + timedelta(days=days_ahead)).replace(
-                hour=hour, minute=minute, second=0, microsecond=0
-            )
-
-            if candidate <= now:
-                candidate += timedelta(days=7)
-
-            candidates.append(candidate)
-        except (ValueError, TypeError):
-            continue
-
-    if not candidates:
-        return "No valid posting times found.", 400
-
-    scheduled_time = min(candidates)
-    scheduled_at = scheduled_time.astimezone(
-        ZoneInfo("UTC")
-    ).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-
-    post = approve_post()
-
-    if not post:
-        return "Could not retrieve the approved post.", 400
-
-    post_id = add_scheduled_post(
-        post_text=post,
-        scheduled_day=scheduled_time.strftime("%A"),
-        scheduled_time=scheduled_time.strftime("%H:%M"),
-        timezone=str(timezone),
-        user_id=member_id,
-        scheduled_at=scheduled_at,
-        member_id=member_id
-    )
-
-    if not approve_scheduled_post(post_id):
-        return "Could not approve the scheduled post.", 500
-
-    return render_template(
-        "approval.html",
-        post=post,
-        result=(
-            "Post approved and scheduled for "
-            + scheduled_time.strftime("%A, %d %B at %I:%M %p")
-            + " (" + str(timezone) + "). It has not been published yet."
+        publish_result = publish_post_with_credentials(
+            pending_post,
+            access_token,
+            member_id
         )
-    )
+
+        if "successfully" not in publish_result.lower():
+            return render_template(
+                "approval.html",
+                post=pending_post,
+                result=publish_result
+            ), 400
+
+        approve_post()
+
+        return render_template(
+            "approval.html",
+            post=pending_post,
+            result="Post published successfully on LinkedIn!"
+        )
+
+    # Option 2: Schedule for the next configured posting time
+    elif approval_action == "schedule":
+
+        schedule = get_schedule(member_id)
+
+        if not schedule or not schedule.get("days_and_times"):
+            return "No posting schedule found. Configure your schedule first.", 400
+
+        timezone = ZoneInfo(schedule.get("timezone", "Asia/Kolkata"))
+        now = datetime.now(timezone)
+
+        weekdays = [
+            "Monday", "Tuesday", "Wednesday", "Thursday",
+            "Friday", "Saturday", "Sunday"
+        ]
+
+        candidates = []
+
+        for day, time_str in schedule["days_and_times"].items():
+            try:
+                hour, minute = map(int, time_str.split(":"))
+                days_ahead = (weekdays.index(day) - now.weekday()) % 7
+
+                candidate = (now + timedelta(days=days_ahead)).replace(
+                    hour=hour, minute=minute, second=0, microsecond=0
+                )
+
+                if candidate <= now:
+                    candidate += timedelta(days=7)
+
+                candidates.append(candidate)
+
+            except (ValueError, TypeError):
+                continue
+
+        if not candidates:
+            return "No valid posting times found.", 400
+
+        scheduled_time = min(candidates)
+
+        scheduled_at = scheduled_time.astimezone(
+            ZoneInfo("UTC")
+        ).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
+        post_id = add_scheduled_post(
+            post_text=pending_post,
+            scheduled_day=scheduled_time.strftime("%A"),
+            scheduled_time=scheduled_time.strftime("%H:%M"),
+            timezone=str(timezone),
+            user_id=member_id,
+            scheduled_at=scheduled_at,
+            member_id=member_id
+        )
+
+        if not approve_scheduled_post(post_id):
+            return "Could not approve the scheduled post.", 500
+
+        approve_post()
+
+        return render_template(
+            "approval.html",
+            post=pending_post,
+            result=(
+                "Post approved and scheduled for "
+                + scheduled_time.strftime("%A, %d %B at %I:%M %p")
+                + " (" + str(timezone) + ")."
+            )
+        )
+
+    return "Invalid approval action.", 400
 
 
 
