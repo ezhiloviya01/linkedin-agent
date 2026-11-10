@@ -482,6 +482,7 @@ def approve():
             timezone=str(timezone),
             user_id=member_id,
             scheduled_at=scheduled_at,
+            access_token=access_token,
             member_id=member_id
         )
 
