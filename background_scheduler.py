@@ -30,7 +30,9 @@ def check_schedules():
 
         try:
             # Retrieve credentials and check token expiry.
-            credentials = get_linkedin_credentials(post["user_id"])
+            credentials = get_linkedin_credentials(
+                post["member_id"] or post["user_id"]
+                )
 
             if credentials is None:
                 error_message = (

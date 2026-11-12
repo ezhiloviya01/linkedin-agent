@@ -14,7 +14,7 @@ It uses Google Gemini for AI-generated content and LinkedIn OAuth 2.0 for accoun
 - Backend content guardrail checks.
 - Post approval and rejection workflow.
 - Scheduled LinkedIn publishing.
-- SQLite database for storing posts, schedules, and credentials.
+- Neon PostgreSQL database for storing application data.
 - Encrypted LinkedIn access-token storage.
 - Token expiry checks and error handling.
 
@@ -24,7 +24,8 @@ It uses Google Gemini for AI-generated content and LinkedIn OAuth 2.0 for accoun
 - Flask
 - Google Gemini API
 - LinkedIn API
-- SQLite
+- Neon PostgreSQL
+- psycopg2
 - APScheduler
 - Cryptography (Fernet)
 - HTML and CSS
@@ -69,11 +70,12 @@ LINKEDIN_CLIENT_ID=your_linkedin_client_id
 LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
 LINKEDIN_REDIRECT_URI=your_linkedin_redirect_uri
 TOKEN_ENCRYPTION_KEY=your_fernet_encryption_key
+DATABASE_URL=your_neon_postgresql_connection_string
 ```
 
 Replace the placeholder values with your actual credentials.
 
-**Important:** Never commit your `.env` file or expose API keys, OAuth secrets, or encryption keys.
+**Important:** Never commit your `.env` file or expose API keys, OAuth secrets, database credentials, or encryption keys.
 
 ## Run the Application Locally
 
@@ -99,6 +101,8 @@ py -3.12 background_scheduler.py
 
 Keep the scheduler stopped when you do not want automatic publishing.
 
+For production, the background scheduler should run as a separate worker process or service, not as part of the Flask web server process.
+
 ## Deployment
 
 The application is deployed on Render.
@@ -108,19 +112,26 @@ The deployment configuration is defined in `render.yaml`.
 - **Build command:** `pip install -r requirements.txt`
 - **Start command:** `gunicorn --timeout 180 oauth_server:app`
 
-Configure the required environment variables in the Render dashboard.
+Configure the required environment variables in the Render dashboard, including `DATABASE_URL`.
 
 Ensure that the LinkedIn OAuth redirect URI matches the deployed callback URL.
 
-**Note:** The background scheduler must run as a separate worker process or service for automatic scheduled publishing in production. It should not be started as part of the Flask web server process.
-
 ## Database
 
-The application uses SQLite through `scheduled_posts.db`.
+The application uses **Neon PostgreSQL** as its database.
 
-The database stores scheduled posts, posting schedules, and LinkedIn credentials.
+The database stores:
 
-Database initialization and schema migration are handled by the `init_db()` function in `scheduler.py`.
+- Scheduled posts and publishing statuses.
+- Posting schedules and time zones.
+- LinkedIn credentials and token expiry information.
+- Client configurations.
+
+The application connects to Neon PostgreSQL using the `DATABASE_URL` environment variable and the `psycopg2` library.
+
+Database initialization and table creation are handled by the `init_db()` function in `scheduler.py`.
+
+The `db_connection()` context manager handles database commits, rollbacks, and connection closure.
 
 ## Security
 
@@ -139,4 +150,4 @@ Database initialization and schema migration are handled by the `init_db()` func
 5. User reviews and approves or rejects the draft.
 6. Approved posts can be scheduled.
 7. The background scheduler checks due posts and attempts publishing.
-8. Publishing results and failures are recorded in the database.
+8. Publishing results and failures are recorded in Neon PostgreSQL.

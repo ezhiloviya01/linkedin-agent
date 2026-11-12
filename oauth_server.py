@@ -67,9 +67,6 @@ TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 
 SCOPE = "openid profile w_member_social"
 
-# OAuth state values for the current application process.
-oauth_states = set()
-
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -169,7 +166,7 @@ def login():
         return "LinkedIn OAuth configuration is missing.", 500
 
     state = secrets.token_urlsafe(32)
-    oauth_states.add(state)
+    session["oauth_state"] = state
 
     authorization_url = AUTH_URL + "?" + urlencode({
         "response_type": "code",
@@ -185,11 +182,14 @@ def login():
 @app.route("/callback")
 def callback():
     returned_state = request.args.get("state")
+    expected_state = session.pop("oauth_state", None)
 
-    if not returned_state or returned_state not in oauth_states:
+    if (
+        not returned_state
+        or not expected_state
+        or not secrets.compare_digest(returned_state, expected_state)
+    ):
         return "Invalid OAuth state. Please try logging in again.", 400
-
-    oauth_states.remove(returned_state)
 
     if request.args.get("error"):
         return (
@@ -482,11 +482,14 @@ def approve():
             timezone=str(timezone),
             user_id=member_id,
             scheduled_at=scheduled_at,
-            access_token=access_token,
             member_id=member_id
         )
+        user_id = session.get("LINKEDIN_MEMBER_ID")
 
-        if not approve_scheduled_post(post_id):
+        if not user_id:
+            return redirect("/")
+
+        if not approve_scheduled_post(post_id, user_id):
             return "Could not approve the scheduled post.", 500
 
         approve_post()
@@ -518,7 +521,12 @@ def reject():
 
 @app.route("/scheduled-approvals/<int:post_id>/approve", methods=["POST"])
 def approve_scheduled(post_id):
-    success = approve_scheduled_post(post_id)
+    user_id = session.get("LINKEDIN_MEMBER_ID")
+
+    if not user_id:
+        return "Please log in first.", 401
+
+    success = approve_scheduled_post(post_id, user_id)
 
     if not success:
         return (
@@ -532,8 +540,13 @@ def approve_scheduled(post_id):
 
 @app.route("/scheduled-approvals")
 def scheduled_approvals():
-    posts = get_pending_scheduled_posts()
-    failed_posts = get_failed_scheduled_posts()
+    user_id = session.get("LINKEDIN_MEMBER_ID")
+
+    if not user_id:
+        return "Please log in first.", 401
+
+    posts = get_pending_scheduled_posts(user_id)
+    failed_posts = get_failed_scheduled_posts(user_id)
 
     return render_template(
         "scheduled_approvals.html",
@@ -541,10 +554,14 @@ def scheduled_approvals():
         failed_posts=failed_posts
     )
 
-
 @app.route("/scheduled-approvals/<int:post_id>/reject", methods=["POST"])
 def reject_scheduled(post_id):
-    success = reject_scheduled_post(post_id)
+    user_id = session.get("LINKEDIN_MEMBER_ID")
+
+    if not user_id:
+        return "Please log in first.", 401
+
+    success = reject_scheduled_post(post_id, user_id)
 
     if not success:
         return (
