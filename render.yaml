@@ -4,3 +4,9 @@ services:
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --timeout 180 oauth_server:app
+
+    - type: worker
+    name: linkedin-agent-scheduler
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python background_scheduler.py
