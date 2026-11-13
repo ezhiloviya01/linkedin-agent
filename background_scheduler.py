@@ -82,17 +82,11 @@ def start_scheduler():
 
 
 if __name__ == "__main__":
-    running_scheduler = start_scheduler()
-
-    print("Background scheduler started. Checking approved posts every minute.")
+    print("Checking for approved posts due for publishing...")
 
     try:
         check_schedules()
-
-        while True:
-            import time
-            time.sleep(60)
-
-    except (KeyboardInterrupt, SystemExit):
-        running_scheduler.shutdown()
-        print("Background scheduler stopped.")
+        print("Scheduler check completed.")
+    except Exception as exc:
+        print(f"Scheduler check failed: {exc}")
+        raise
