@@ -140,6 +140,16 @@ def init_db():
                 )
             """)
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS activity_logs (
+                    id BIGSERIAL PRIMARY KEY,
+                    action TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    post TEXT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
 
 def save_linkedin_credentials(member_id, access_token, expires_in):
     token_expires_at = (
@@ -488,3 +498,4 @@ def get_client_config(user_id):
         value = json.loads(value)
 
     return value
+
